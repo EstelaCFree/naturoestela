@@ -43,3 +43,4 @@ coverage/
 # OpenSpec temp artifacts (future-proof)
 # =========================
 .openspec-cache/
+node_modules/
