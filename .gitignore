@@ -44,3 +44,28 @@ coverage/
 # =========================
 .openspec-cache/
 node_modules/
+
+# =========================
+# Python build artifacts
+# =========================
+*.egg-info/
+*.dist-info/
+*.pyc
+__pycache__/
+*.egg
+
+# =========================
+# Database / Local data
+# =========================
+*.db
+*.sqlite
+*.sqlite3
+
+# =========================
+# Large image assets (keep on disk, store via CDN/cloud, not git)
+# =========================
+frontend/public/assets/*.jpg
+frontend/public/assets/*.jpeg
+frontend/public/assets/*.png
+frontend/public/assets/*.webp
+frontend/public/assets/*.gif

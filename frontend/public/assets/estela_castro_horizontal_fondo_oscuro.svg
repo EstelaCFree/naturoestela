@@ -1,0 +1,82 @@
+<svg viewBox="0 0 720 200" xmlns="http://www.w3.org/2000/svg" width="720" height="200">
+  <title>Estela Castro Naturopatía — Horizontal Fondo Oscuro</title>
+  <defs>
+    <linearGradient id="fadeTop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#9A7B3C" stop-opacity="1"/>
+      <stop offset="65%"  stop-color="#9A7B3C" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#9A7B3C" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fadeBottom" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%"   stop-color="#9A7B3C" stop-opacity="1"/>
+      <stop offset="65%"  stop-color="#9A7B3C" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#9A7B3C" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fadeRight" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0%"   stop-color="#9A7B3C" stop-opacity="1"/>
+      <stop offset="65%"  stop-color="#9A7B3C" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#9A7B3C" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fadeLeft" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#9A7B3C" stop-opacity="1"/>
+      <stop offset="65%"  stop-color="#9A7B3C" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#9A7B3C" stop-opacity="0"/>
+    </linearGradient>
+    <mask id="circleCutout">
+      <rect width="720" height="200" fill="white"/>
+      <circle cx="100" cy="12"  r="2.8" fill="black"/>
+      <circle cx="100" cy="188" r="2.8" fill="black"/>
+      <circle cx="188" cy="100" r="2.8" fill="black"/>
+      <circle cx="12"  cy="100" r="2.8" fill="black"/>
+    </mask>
+  </defs>
+
+  <g mask="url(#circleCutout)">
+    <circle cx="100" cy="100" r="72" fill="none" stroke="#9A7B3C" stroke-width="1"
+      stroke-dasharray="3,4,6,2,2,5,7,3,2,5,4,2" stroke-dashoffset="10" opacity="0.75"/>
+    <circle cx="100" cy="100" r="73.5" fill="none" stroke="#9A7B3C" stroke-width="0.5"
+      stroke-dasharray="2,7,4,3,2,6,5,2,2,5" stroke-dashoffset="4" opacity="0.35"/>
+    <circle cx="100" cy="100" r="60" fill="none" stroke="#9A7B3C" stroke-width="1" opacity="0.85"/>
+    <rect x="99" y="32"  width="2" height="30" fill="url(#fadeTop)"    opacity="0.95"/>
+    <rect x="99" y="138" width="2" height="30" fill="url(#fadeBottom)" opacity="0.95"/>
+    <rect x="138" y="99" width="30" height="2" fill="url(#fadeRight)"  opacity="0.95"/>
+    <rect x="32"  y="99" width="30" height="2" fill="url(#fadeLeft)"   opacity="0.95"/>
+    <g fill="none" stroke="#9A7B3C" stroke-width="1.1" stroke-linecap="round">
+      <path d="M100,100 C84,93 84,69 100,63 C116,69 116,93 100,100Z"/>
+      <path d="M100,100 C84,107 84,131 100,137 C116,131 116,107 100,100Z"/>
+      <path d="M100,100 C107,84 131,84 137,100 C131,116 107,116 100,100Z"/>
+      <path d="M100,100 C93,84 69,84 63,100 C69,116 93,116 100,100Z"/>
+      <path d="M100,100 C96,84 113,68 129,72 C133,88 117,99 100,100Z"/>
+      <path d="M100,100 C117,101 133,112 129,128 C113,132 96,116 100,100Z"/>
+      <path d="M100,100 C104,116 87,132 71,128 C67,112 83,101 100,100Z"/>
+      <path d="M100,100 C83,99 67,88 71,72 C87,68 104,84 100,100Z"/>
+    </g>
+    <g stroke="#9A7B3C" stroke-width="0.6" opacity="0.55" stroke-linecap="round">
+      <line x1="100" y1="100" x2="100" y2="65"/>
+      <line x1="100" y1="100" x2="100" y2="135"/>
+      <line x1="100" y1="100" x2="135" y2="100"/>
+      <line x1="100" y1="100" x2="65"  y2="100"/>
+      <line x1="100" y1="100" x2="128" y2="73"/>
+      <line x1="100" y1="100" x2="128" y2="127"/>
+      <line x1="100" y1="100" x2="72"  y2="127"/>
+      <line x1="100" y1="100" x2="72"  y2="73"/>
+    </g>
+    <circle cx="100" cy="100" r="2.2" fill="#9A7B3C"/>
+  </g>
+
+  <circle cx="100" cy="28"  r="3.5" fill="none" stroke="#9A7B3C" stroke-width="1"/>
+  <circle cx="100" cy="172" r="3.5" fill="none" stroke="#9A7B3C" stroke-width="1"/>
+  <circle cx="172" cy="100" r="3.5" fill="none" stroke="#9A7B3C" stroke-width="1"/>
+  <circle cx="28"  cy="100" r="3.5" fill="none" stroke="#9A7B3C" stroke-width="1"/>
+
+  <text x="457" y="88" text-anchor="middle"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="44" font-weight="400" letter-spacing="5"
+    fill="#FFFFFF">ESTELA CASTRO</text>
+
+  <line x1="205" y1="115" x2="285" y2="115" stroke="#9A7B3C" stroke-width="1"/>
+  <text x="457" y="123" text-anchor="middle"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="22" font-weight="400" letter-spacing="7"
+    fill="#9A7B3C">NATUROPATÍA</text>
+  <line x1="629" y1="115" x2="710" y2="115" stroke="#9A7B3C" stroke-width="1"/>
+</svg>
