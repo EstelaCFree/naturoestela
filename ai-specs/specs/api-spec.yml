@@ -1,0 +1,1000 @@
+openapi: "3.1.0"
+info:
+  title: naturoestela API
+  version: "2.0.0"
+  description: REST API for the naturoestela website — public blog and admin management.
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+
+tags:
+  - name: system
+  - name: blog
+  - name: admin-posts
+  - name: admin-categories
+  - name: admin-tags
+  - name: admin-images
+  - name: newsletter
+  - name: contact
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: health
+      tags: [system]
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+
+  # ── Public blog ─────────────────────────────────────────────────────────────
+
+  /api/v1/posts/:
+    get:
+      summary: List published blog posts
+      operationId: listPosts
+      tags: [blog]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1, minimum: 1 }
+        - name: page_size
+          in: query
+          schema: { type: integer, default: 10, minimum: 1, maximum: 20 }
+        - name: category
+          in: query
+          schema: { type: string }
+          description: Filter by category slug
+        - name: tag
+          in: query
+          schema: { type: string }
+          description: Filter by tag slug
+        - name: preview
+          in: query
+          schema: { type: boolean, default: false }
+          description: When true, returns the 3 most recent posts
+      responses:
+        "200":
+          description: Paginated list of published posts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PostListResponse"
+
+  /api/v1/posts/{slug}:
+    get:
+      summary: Get a single published post by slug
+      operationId: getPostBySlug
+      tags: [blog]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Post found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/categories/:
+    get:
+      summary: List all categories (post_count = published only)
+      operationId: listCategories
+      tags: [blog]
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryListResponse"
+
+  /api/v1/tags/:
+    get:
+      summary: List all tags (post_count = published only)
+      operationId: listTags
+      tags: [blog]
+      responses:
+        "200":
+          description: List of tags
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagListResponse"
+
+  # ── Admin — posts ────────────────────────────────────────────────────────────
+
+  /api/v1/admin/posts/:
+    get:
+      summary: List all posts (all statuses)
+      operationId: adminListPosts
+      tags: [admin-posts]
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1, minimum: 1 }
+        - name: page_size
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+        - name: status
+          in: query
+          schema: { type: string, enum: [draft, scheduled, published] }
+        - name: category_id
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Paginated admin post list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPostListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      summary: Create a post (draft)
+      operationId: adminCreatePost
+      tags: [admin-posts]
+      security:
+        - AdminBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostCreateRequest"
+      responses:
+        "201":
+          description: Post created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPost"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/admin/posts/{post_id}:
+    get:
+      summary: Get single post (admin, any status)
+      operationId: adminGetPost
+      tags: [admin-posts]
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPost"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Update a post
+      operationId: adminUpdatePost
+      tags: [admin-posts]
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostUpdateRequest"
+      responses:
+        "200":
+          description: Post updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPost"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      summary: Delete a post
+      operationId: adminDeletePost
+      tags: [admin-posts]
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/admin/posts/{post_id}/publish:
+    patch:
+      summary: Publish or schedule a post
+      operationId: adminPublishPost
+      tags: [admin-posts]
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                published_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                  description: Omit for immediate publish; future datetime = scheduled
+      responses:
+        "200":
+          description: Post published/scheduled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPost"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/admin/posts/{post_id}/unpublish:
+    patch:
+      summary: Revert post to draft
+      operationId: adminUnpublishPost
+      tags: [admin-posts]
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Post reverted to draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPost"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/admin/posts/{post_id}/tags:
+    put:
+      summary: Replace all tags for a post
+      operationId: adminSetPostTags
+      tags: [admin-posts]
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tag_ids]
+              properties:
+                tag_ids:
+                  type: array
+                  items: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Tags updated
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: Unknown tag_id
+
+  /api/v1/admin/posts/{post_id}/body-images:
+    put:
+      summary: Replace body images for a post
+      operationId: adminSetPostBodyImages
+      tags: [admin-posts]
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body_images]
+              properties:
+                body_images:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/BodyImageItem"
+      responses:
+        "200":
+          description: Body images updated
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: Unknown image_id
+
+  # ── Admin — categories ───────────────────────────────────────────────────────
+
+  /api/v1/admin/categories/:
+    get:
+      summary: List categories (all post counts)
+      operationId: adminListCategories
+      tags: [admin-categories]
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: Category list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      summary: Create a category
+      operationId: adminCreateCategory
+      tags: [admin-categories]
+      security:
+        - AdminBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                slug: { type: string, nullable: true }
+      responses:
+        "201":
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/admin/categories/{category_id}:
+    put:
+      summary: Update a category
+      operationId: adminUpdateCategory
+      tags: [admin-categories]
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: category_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                slug: { type: string, nullable: true }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      summary: Delete a category (blocked if posts assigned)
+      operationId: adminDeleteCategory
+      tags: [admin-categories]
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: category_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Category has assigned posts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Admin — tags ─────────────────────────────────────────────────────────────
+
+  /api/v1/admin/tags/:
+    get:
+      summary: List tags (all post counts)
+      operationId: adminListTags
+      tags: [admin-tags]
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: Tag list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      summary: Create a tag
+      operationId: adminCreateTag
+      tags: [admin-tags]
+      security:
+        - AdminBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                slug: { type: string, nullable: true }
+      responses:
+        "201":
+          description: Tag created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tag"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/admin/tags/{tag_id}:
+    put:
+      summary: Update a tag
+      operationId: adminUpdateTag
+      tags: [admin-tags]
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: tag_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                slug: { type: string, nullable: true }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tag"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete a tag (silently detaches from posts)
+      operationId: adminDeleteTag
+      tags: [admin-tags]
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: tag_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Admin — images ───────────────────────────────────────────────────────────
+
+  /api/v1/admin/images/:
+    get:
+      summary: List uploaded images
+      operationId: adminListImages
+      tags: [admin-images]
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1, minimum: 1 }
+        - name: page_size
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+      responses:
+        "200":
+          description: Paginated image list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImageListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      summary: Upload and optimise an image (→ WebP)
+      operationId: adminUploadImage
+      tags: [admin-images]
+      security:
+        - AdminBearer: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Image uploaded and processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Image"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "413":
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Unsupported file type
+
+  /api/v1/admin/images/{image_id}:
+    patch:
+      summary: Update image metadata (alt_text, subtitle)
+      operationId: adminUpdateImageMetadata
+      tags: [admin-images]
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: image_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                alt_text: { type: string, nullable: true }
+                subtitle: { type: string, nullable: true }
+      responses:
+        "200":
+          description: Metadata updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Image"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete an image (blocked if in use)
+      operationId: adminDeleteImage
+      tags: [admin-images]
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: image_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Image is in use by one or more posts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Newsletter & contact ─────────────────────────────────────────────────────
+
+  /api/v1/newsletter/subscribe:
+    post:
+      summary: Subscribe an email to the newsletter
+      operationId: subscribe
+      tags: [newsletter]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "201":
+          description: Successfully subscribed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "200":
+          description: Already subscribed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "422":
+          description: Validation error
+
+  /api/v1/contact/:
+    post:
+      summary: Submit a contact form message
+      operationId: submitContact
+      tags: [contact]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactRequest"
+      responses:
+        "201":
+          description: Message received
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "422":
+          description: Validation error
+
+components:
+  securitySchemes:
+    AdminBearer:
+      type: http
+      scheme: bearer
+      description: >
+        Static API key. Human author uses ADMIN_SECRET_KEY;
+        AI agent uses AGENT_SECRET_KEY. Both resolve to a CallerIdentity
+        that is stored as created_by on posts.
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Missing or invalid bearer token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: Conflict (e.g. duplicate slug or resource in use)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    # ── Shared primitives ─────────────────────────────────────────────────────
+
+    ErrorResponse:
+      type: object
+      properties:
+        error: { type: string }
+        code: { type: string }
+
+    MessageResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            message: { type: string }
+
+    # ── Categories & Tags ─────────────────────────────────────────────────────
+
+    Category:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        post_count: { type: integer }
+        created_at: { type: string, format: date-time }
+
+    CategoryListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Category"
+
+    Tag:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        post_count: { type: integer }
+        created_at: { type: string, format: date-time }
+
+    TagListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
+
+    # ── Images ────────────────────────────────────────────────────────────────
+
+    Image:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        original_url: { type: string }
+        thumbnail_url: { type: string }
+        filename: { type: string }
+        alt_text: { type: string, nullable: true }
+        subtitle: { type: string, nullable: true }
+        width: { type: integer, nullable: true }
+        height: { type: integer, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    ImageListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Image"
+        meta:
+          type: object
+          properties:
+            total: { type: integer }
+            page: { type: integer }
+            page_size: { type: integer }
+
+    BodyImageItem:
+      type: object
+      required: [image_id, alignment, size]
+      properties:
+        image_id: { type: string, format: uuid }
+        alignment: { type: string, enum: [left, center, right] }
+        size: { type: string, enum: [small, medium, full] }
+        sort_order: { type: integer, default: 0 }
+
+    # ── Public post ───────────────────────────────────────────────────────────
+
+    PostSeo:
+      type: object
+      properties:
+        title: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        keywords: { type: string, nullable: true }
+
+    PostFeaturedImage:
+      type: object
+      properties:
+        original_url: { type: string }
+        thumbnail_url: { type: string }
+        alt_text: { type: string, nullable: true }
+        subtitle: { type: string, nullable: true }
+
+    PostBodyImage:
+      type: object
+      properties:
+        image_id: { type: string, format: uuid }
+        original_url: { type: string }
+        thumbnail_url: { type: string }
+        alt_text: { type: string, nullable: true }
+        subtitle: { type: string, nullable: true }
+        alignment: { type: string, enum: [left, center, right] }
+        size: { type: string, enum: [small, medium, full] }
+        sort_order: { type: integer }
+
+    Post:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        slug: { type: string }
+        excerpt: { type: string }
+        content: { type: string }
+        category:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/Category"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
+        featured_image:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/PostFeaturedImage"
+        body_images:
+          type: array
+          items:
+            $ref: "#/components/schemas/PostBodyImage"
+        seo:
+          $ref: "#/components/schemas/PostSeo"
+        published_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    PostListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Post"
+        meta:
+          type: object
+          properties:
+            total: { type: integer }
+            page: { type: integer }
+            page_size: { type: integer }
+
+    # ── Admin post ────────────────────────────────────────────────────────────
+
+    PostCreateRequest:
+      type: object
+      required: [title, content, category_id]
+      properties:
+        title: { type: string }
+        content: { type: string }
+        category_id: { type: string, format: uuid }
+        excerpt: { type: string, default: "" }
+        slug: { type: string, nullable: true }
+        featured_image_id: { type: string, format: uuid, nullable: true }
+        seo_title: { type: string, nullable: true }
+        seo_description: { type: string, nullable: true }
+        seo_keywords: { type: string, nullable: true }
+
+    PostUpdateRequest:
+      type: object
+      required: [title, content, category_id]
+      properties:
+        title: { type: string }
+        content: { type: string }
+        category_id: { type: string, format: uuid }
+        excerpt: { type: string, default: "" }
+        slug: { type: string, nullable: true }
+        featured_image_id: { type: string, format: uuid, nullable: true }
+        seo_title: { type: string, nullable: true }
+        seo_description: { type: string, nullable: true }
+        seo_keywords: { type: string, nullable: true }
+
+    AdminPost:
+      allOf:
+        - $ref: "#/components/schemas/Post"
+        - type: object
+          properties:
+            status: { type: string, enum: [draft, scheduled, published] }
+            created_by: { type: string, enum: [human, ai] }
+
+    AdminPostListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminPost"
+        meta:
+          type: object
+          properties:
+            total: { type: integer }
+            page: { type: integer }
+            page_size: { type: integer }
+
+    # ── Contact ───────────────────────────────────────────────────────────────
+
+    ContactRequest:
+      type: object
+      required: [name, email, subject, message]
+      properties:
+        name: { type: string, maxLength: 255 }
+        email: { type: string, format: email }
+        subject: { type: string, maxLength: 255 }
+        message: { type: string, maxLength: 5000 }

@@ -1,0 +1,518 @@
+---
+description: Frontend development standards, best practices, and conventions for the naturoestela React/TypeScript/Vite application including component patterns, state management with React Query, Tailwind CSS, and testing with Vitest and React Testing Library
+globs: ["frontend/src/**/*.{ts,tsx}", "frontend/tests/**/*.{ts,tsx}", "frontend/vite.config.ts", "frontend/tsconfig.json", "frontend/package.json"]
+alwaysApply: true
+---
+
+# Frontend Project Standards and Best Practices
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Technology Stack](#technology-stack)
+- [Project Structure](#project-structure)
+- [Coding Standards](#coding-standards)
+- [State Management](#state-management)
+- [Service Layer Architecture](#service-layer-architecture)
+- [UI/UX Standards](#uiux-standards)
+- [Testing Standards](#testing-standards)
+- [Configuration Standards](#configuration-standards)
+- [Performance Best Practices](#performance-best-practices)
+- [Development Workflow](#development-workflow)
+
+---
+
+## Overview
+
+This document defines the standards, conventions, and best practices for the naturoestela frontend application. The frontend is built with React 18, TypeScript, and Vite, following component-driven development with a strong emphasis on type safety, accessibility, and testability.
+
+---
+
+## Technology Stack
+
+### Core Technologies
+- **React 18**: Functional components and concurrent features
+- **TypeScript 5.x**: Strict mode enabled throughout
+- **Vite**: Build tool and development server
+
+### State Management & Data Flow
+- **TanStack React Query v5**: Server state — fetching, caching, synchronization
+- **useState / useContext**: Local and shared UI state. No global client-state library unless complexity requires it.
+
+### Routing
+- **React Router DOM v6**: Client-side routing with nested routes and `<Outlet>`
+
+### Styling
+- **Tailwind CSS v3**: Utility-first CSS. No inline styles.
+- **clsx / tailwind-merge**: Conditional class composition
+
+### Testing Framework
+- **Vitest**: Fast unit and component testing (Vite-native)
+- **React Testing Library (RTL)**: Component interaction tests
+- **MSW (Mock Service Worker)**: API mocking in tests and development
+
+### Development Tools
+- **ESLint**: Linting with `@typescript-eslint`, `eslint-plugin-react`, `eslint-plugin-react-hooks`
+- **Prettier**: Code formatting (integrated with ESLint via `eslint-config-prettier`)
+- **TypeScript**: Strict type checking
+
+---
+
+## Project Structure
+
+```
+frontend/
+├── public/                   # Static assets served at root
+├── src/
+│   ├── assets/               # Images, fonts, SVGs
+│   ├── components/           # Reusable, presentational UI components
+│   │   └── ui/               # Low-level primitives (Button, Input, Modal)
+│   ├── features/             # Feature-scoped modules
+│   │   └── appointments/
+│   │       ├── components/   # Feature-specific components
+│   │       ├── hooks/        # Feature-specific React Query hooks
+│   │       ├── api/          # API call functions for this feature
+│   │       └── types.ts      # Feature-local TypeScript types
+│   ├── hooks/                # Shared custom hooks
+│   ├── lib/                  # Utilities, helpers, constants
+│   │   └── api-client.ts     # Axios or fetch wrapper
+│   ├── pages/                # Route-level page components
+│   ├── router/               # React Router configuration
+│   ├── styles/               # Global CSS, Tailwind base overrides
+│   ├── types/                # Global TypeScript types and interfaces
+│   ├── App.tsx               # Root component, router outlet
+│   └── main.tsx              # Application entry point
+├── tests/
+│   ├── unit/                 # Component and hook unit tests
+│   └── mocks/                # MSW handlers and server setup
+├── vite.config.ts
+├── tsconfig.json
+├── tailwind.config.ts
+├── postcss.config.js
+└── package.json
+```
+
+---
+
+## Coding Standards
+
+### Naming Conventions
+
+- **Component files**: `PascalCase` — `AppointmentCard.tsx`, `BookingForm.tsx`
+- **Hook files**: `camelCase` prefixed with `use` — `useAppointments.ts`, `useAuthUser.ts`
+- **Utility / service files**: `camelCase` — `appointmentApi.ts`, `formatDate.ts`
+- **Type / interface names**: `PascalCase` — `Appointment`, `BookingFormValues`
+- **CSS classes**: Tailwind utilities only — no custom class names except in `styles/` globals
+- **Variables / functions**: `camelCase` — `patientId`, `handleSubmit`, `fetchAppointments`
+- **Constants**: `UPPER_SNAKE_CASE` — `MAX_PAGE_SIZE`, `API_BASE_URL`
+
+All identifiers, comments, and error messages must be in English.
+
+### Component Conventions
+
+#### Functional Components Only
+
+All components are function components. No class components.
+
+```tsx
+// Good
+type AppointmentCardProps = {
+  appointment: Appointment;
+  onCancel: (id: string) => void;
+};
+
+export function AppointmentCard({ appointment, onCancel }: AppointmentCardProps) {
+  return (
+    <div className="rounded-lg border p-4 shadow-sm">
+      <p className="text-sm text-gray-500">{appointment.scheduledAt}</p>
+      <button
+        type="button"
+        className="mt-2 text-red-500 hover:underline"
+        onClick={() => onCancel(appointment.id)}
+      >
+        Cancel
+      </button>
+    </div>
+  );
+}
+```
+
+#### Props
+
+- Always define props as a named `type` (not `interface`) for consistency.
+- Use destructuring in function signature.
+- Avoid prop drilling beyond 2 levels — use Context or co-locate state.
+
+#### Component Size
+
+- A component should do one thing. Extract sub-components when JSX exceeds ~80 lines.
+- Keep page components thin — they compose features, they do not contain business logic.
+
+---
+
+## State Management
+
+### Server State — React Query
+
+All data fetched from the API is managed by TanStack React Query. Never store server data in `useState`.
+
+```tsx
+// features/appointments/hooks/useAppointments.ts
+import { useQuery } from "@tanstack/react-query";
+import { fetchAppointments } from "../api/appointmentApi";
+
+export function useAppointments(patientId: string) {
+  return useQuery({
+    queryKey: ["appointments", patientId],
+    queryFn: () => fetchAppointments(patientId),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
+```
+
+```tsx
+// features/appointments/hooks/useCreateAppointment.ts
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createAppointment } from "../api/appointmentApi";
+
+export function useCreateAppointment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createAppointment,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+    },
+  });
+}
+```
+
+### Local / UI State — useState + useContext
+
+Use `useState` for ephemeral UI state (modal open, form values, filters). Share state that multiple components need via `useContext` with a typed provider. Avoid `useReducer` unless the state transitions are genuinely complex.
+
+### Loading and Error States
+
+Always render loading and error UI for async operations.
+
+```tsx
+export function AppointmentList({ patientId }: { patientId: string }) {
+  const { data, isLoading, isError, error } = useAppointments(patientId);
+
+  if (isLoading) return <Spinner />;
+  if (isError) return <ErrorBanner message={error.message} />;
+
+  return (
+    <ul>
+      {data.map((appt) => (
+        <AppointmentCard key={appt.id} appointment={appt} />
+      ))}
+    </ul>
+  );
+}
+```
+
+---
+
+## Service Layer Architecture
+
+### API Functions
+
+API call functions live in `features/<feature>/api/` or `lib/api-client.ts`. They are plain async functions — not classes.
+
+```tsx
+// features/appointments/api/appointmentApi.ts
+import { apiClient } from "@/lib/api-client";
+import type { Appointment, CreateAppointmentPayload } from "../types";
+
+export async function fetchAppointments(patientId: string): Promise<Appointment[]> {
+  const { data } = await apiClient.get<{ data: Appointment[] }>(
+    `/appointments?patient_id=${patientId}`
+  );
+  return data.data;
+}
+
+export async function createAppointment(payload: CreateAppointmentPayload): Promise<Appointment> {
+  const { data } = await apiClient.post<{ data: Appointment }>("/appointments", payload);
+  return data.data;
+}
+```
+
+### API Client
+
+A single configured axios instance used across all features.
+
+```tsx
+// lib/api-client.ts
+import axios from "axios";
+
+export const apiClient = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  headers: { "Content-Type": "application/json" },
+});
+
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem("access_token");
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+```
+
+`VITE_API_URL` points to the backend base URL only (e.g., `http://localhost:8000`). Route prefixes like `/api/v1` are added per-call or configured in the API functions — not in the env var.
+
+---
+
+## UI/UX Standards
+
+### Tailwind CSS
+
+- Use Tailwind utility classes exclusively. No inline `style` props.
+- Use `clsx` + `tailwind-merge` for conditional or merged class names.
+- Design tokens (colors, spacing) are defined in `tailwind.config.ts` — never hardcode hex values.
+
+```tsx
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: Parameters<typeof clsx>) {
+  return twMerge(clsx(inputs));
+}
+
+// Usage
+<button className={cn("px-4 py-2 rounded", isActive && "bg-green-600 text-white")} />
+```
+
+### Form Handling
+
+- Use `react-hook-form` for forms. Validate with Zod schemas.
+- Forms are controlled via `react-hook-form` — avoid manual `useState` for form fields.
+- Disable submit buttons during submission (`isSubmitting`).
+- Display field-level validation errors inline.
+
+```tsx
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const schema = z.object({
+  notes: z.string().max(500).optional(),
+  scheduledAt: z.string().min(1, "Date is required"),
+});
+
+type FormValues = z.infer<typeof schema>;
+
+export function BookingForm({ onSubmit }: { onSubmit: (values: FormValues) => void }) {
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+  });
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register("scheduledAt")} type="datetime-local" aria-label="Appointment date" />
+      {errors.scheduledAt && <p className="text-red-500 text-sm">{errors.scheduledAt.message}</p>}
+      <button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "Saving..." : "Book"}
+      </button>
+    </form>
+  );
+}
+```
+
+### Navigation
+
+- Use React Router `<Link>` and `useNavigate` for all navigation.
+- Implement breadcrumb navigation on nested views.
+
+### Accessibility
+
+- All interactive elements have accessible labels (`aria-label` or visible label).
+- Use semantic HTML: `<button>`, `<nav>`, `<main>`, `<section>`, `<article>`.
+- Ensure keyboard navigability for all interactive components.
+- Color contrast must meet WCAG AA (4.5:1 for normal text).
+- Images have `alt` text. Decorative images use `alt=""`.
+
+---
+
+## Testing Standards
+
+### Unit and Component Tests
+
+Use Vitest + React Testing Library. Test behavior, not implementation details.
+
+```tsx
+// tests/unit/AppointmentCard.test.tsx
+import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { AppointmentCard } from "@/features/appointments/components/AppointmentCard";
+
+describe("AppointmentCard", () => {
+  it("displays appointment date", () => {
+    render(<AppointmentCard appointment={mockAppointment} onCancel={vi.fn()} />);
+    expect(screen.getByText(mockAppointment.scheduledAt)).toBeInTheDocument();
+  });
+
+  it("calls onCancel with appointment id when cancel clicked", () => {
+    const onCancel = vi.fn();
+    render(<AppointmentCard appointment={mockAppointment} onCancel={onCancel} />);
+    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    expect(onCancel).toHaveBeenCalledWith(mockAppointment.id);
+  });
+});
+```
+
+### React Query Tests
+
+Wrap components in a `QueryClientProvider` in tests.
+
+```tsx
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render } from "@testing-library/react";
+
+function renderWithQuery(ui: React.ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
+```
+
+### API Mocking
+
+Use MSW to mock API calls in tests. Define handlers in `tests/mocks/handlers.ts`.
+
+```ts
+// tests/mocks/handlers.ts
+import { http, HttpResponse } from "msw";
+
+export const handlers = [
+  http.get("/api/v1/appointments", () => {
+    return HttpResponse.json({ data: [mockAppointment] });
+  }),
+];
+```
+
+### Test Naming Convention
+
+- `<ComponentName>.test.tsx` for component tests.
+- `use<Name>.test.ts` for hook tests.
+- Test descriptions follow: `"<verb>s <subject> when <condition>"`
+  - e.g., `"displays loading spinner when data is fetching"`, `"calls onCancel when button clicked"`
+
+### Test Coverage
+
+- **Threshold**: 80% lines and branches for frontend.
+- Run: `vitest run --coverage`
+
+### Definition of Done — Frontend
+
+- [ ] TypeScript compiles without errors (`tsc --noEmit`)
+- [ ] ESLint passes (`eslint src/`)
+- [ ] All Vitest tests pass (`vitest run`)
+- [ ] Coverage ≥ 80% (`vitest run --coverage`)
+- [ ] Component is accessible (semantic HTML, aria labels, keyboard navigable)
+- [ ] Loading and error states are handled and rendered
+- [ ] No inline styles — Tailwind classes only
+- [ ] All new API integrations use React Query hooks
+
+---
+
+## Configuration Standards
+
+### TypeScript Configuration
+
+Strict mode is mandatory.
+
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"] },
+    "jsx": "react-jsx",
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  }
+}
+```
+
+### ESLint Configuration
+
+Extend `@typescript-eslint/recommended`, `plugin:react-hooks/recommended`, and `prettier`.
+
+### Environment Variables
+
+All env vars are prefixed with `VITE_`. Accessed via `import.meta.env.VITE_*`.
+
+- `VITE_API_URL` — backend base URL, e.g., `http://localhost:8000`
+- Provide `.env.example` with placeholder values.
+- Never commit `.env.local` or `.env.production`.
+
+---
+
+## Performance Best Practices
+
+### Component Optimization
+
+- Use `React.memo` for components that receive stable props and re-render frequently.
+- Use `useCallback` for event handlers passed to memoized children.
+- Use `useMemo` for expensive pure computations — not for object identity unless profiled.
+
+### Code Splitting
+
+- Lazy-load page components via `React.lazy` + `<Suspense>`.
+- Route-level code splitting is the default via React Router's lazy route loading.
+
+### React Query Caching
+
+- Set appropriate `staleTime` per query based on how frequently data changes.
+- Use `prefetchQuery` for anticipated navigations (e.g., list → detail).
+
+### Bundle Optimization
+
+- Import only what you use. Avoid `import * as`.
+- Keep Tailwind purging active — unused classes are removed at build time.
+
+---
+
+## Development Workflow
+
+### Git Workflow
+
+- Feature branches: `feat/<short-description>-frontend`
+- Bug fix branches: `fix/<short-description>-frontend`
+- Commit messages in English, imperative mood: `Add appointment booking form`
+- Keep branches small and focused. One PR per logical change.
+
+### Development Scripts
+
+```bash
+# Install deps
+npm install
+
+# Dev server
+npm run dev
+
+# Type check
+npm run type-check
+
+# Lint
+npm run lint
+
+# Run tests
+npm run test
+
+# Run tests with coverage
+npm run test:coverage
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+### Code Quality
+
+- Run `tsc --noEmit` and `eslint src/` before committing — enforced via pre-commit hooks.
+- Prettier formats on save via editor integration and on commit via pre-commit.
